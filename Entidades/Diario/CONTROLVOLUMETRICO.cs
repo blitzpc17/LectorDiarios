@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Entidades.Diario;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,7 +13,7 @@ namespace CapaDatos.Diario
         public string RfcContribuyente { get; set; }
         public string RfcRepresentanteLegal { get; set; }
         public string RfcProveedor { get; set; }
-        //public Caracter Caracter { get; set; }
+        public CARACTER Caracter { get; set; }
         public string ClaveInstalacion { get; set; }
         public string DescripcionInstalacion { get; set; }
         public int NumeroPozos { get; set; }
@@ -23,5 +24,6 @@ namespace CapaDatos.Diario
         public DateTime FechaYHoraCorte { get; set; }
         public List<PRODUCTO> PRODUCTO { get; set; }
         public BITACORA Bitacora { get; set; }
+        public DATAENCABEZADOINVENTARIODIARIO Encabezado { get; set; }
     }
 }

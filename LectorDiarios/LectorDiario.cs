@@ -1,6 +1,7 @@
 ﻿using CapaDatos.Diario;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Entidades;
+using Entidades.Diario;
 using SpreadsheetLight;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,9 @@ namespace LectorDiarios
         private List<clsControlVolumetrico> LstControlVolumetrico;
         private string pathArchivos = "";
         private string pathDestino = "";
+        private DATAENCABEZADOINVENTARIODIARIO dataEncabezado;
+
+        private List<PRODUCTO> LstProductosMEnsual;
         #endregion
 
         public LectorDiario()
@@ -46,6 +50,7 @@ namespace LectorDiarios
         {
             cv = null;
             LstControlVolumetrico = new List<clsControlVolumetrico>();
+            LstProductosMEnsual = new List<PRODUCTO>();
             pathDestino = "";
             pathArchivos = "";
         }
@@ -58,25 +63,55 @@ namespace LectorDiarios
 
         private void VisualizarInventario()
         {
+            GenerarInventarioMensual();           
             Inventarios frmInventario = new Inventarios();
+            frmInventario.obj = cv;
             frmInventario.ShowDialog();
         }
 
-        private void LeerXmlDescomprimidos(String pathLocalizacion)
-        {/*
-            DirectoryInfo dinfo = new DirectoryInfo(pathLocalizacion);
-            foreach(DirectoryInfo dir in dinfo.GetDirectories())
+        private void GenerarInventarioMensual()
+        {
+            var productos = LstProductosMEnsual.GroupBy(x => x.ClaveProducto).Select(x=>x.ToList()).ToList();
+            dataEncabezado = new DATAENCABEZADOINVENTARIODIARIO();
+            
+
+            dataEncabezado.DataEmpresa = new ENCABEZADOEMPRESA
             {
-                foreach(DirectoryInfo subdir in dir.GetDirectories()){
-                    if (subdir.Name != @"Diario") continue;
-                    FileInfo[] lstFiles =  subdir.GetFiles();
-                    LstControlVolumetrico = new List<clsControlVolumetrico>();
-                    foreach (FileInfo file in lstFiles)
-                    {
-                        
-                    }
+                Version = cv.Version,
+                RfcRepresentanteLegal = cv.RfcRepresentanteLegal,
+                RfcProveedor = cv.RfcProveedor,
+                RfcContribuyente = cv.RfcContribuyente,
+                NumeroPermiso = cv.Caracter.NumPermiso,
+                TipoCaracter = cv.Caracter.ModalidadPermiso,
+                Periodo = cv.FechaYHoraCorte.ToString(),
+                
+
+            };
+            dataEncabezado.DataProducto = new List<ENCABEZADOPRODUCTO>();
+    
+            foreach(var pro in productos)
+            {
+                ENCABEZADOPRODUCTO obj = new ENCABEZADOPRODUCTO();
+                obj.ClaveProducto = pro.First().ClaveProducto;
+                obj.ClaveSubProducto = pro.First().ClaveSubProducto;
+                obj.MarcaComercial = pro.First().MarcaComercial;
+
+                foreach (var item in pro)
+                {
+                    obj.InventarioFinalMes += item.Tanque.Existencias.VolumenAcumOpsRecepcion.ValorNumerico;
+                    obj.VecesRecepcionProducto += item.Tanque.Recepciones.SumaVolumenRecepcion.ValorNumerico;
+                    obj.LitrosAcumuladosMes += item.Tanque.Recepciones.SumaVolumenRecepcion.ValorNumerico;
                 }
-            }*/
+
+                dataEncabezado.DataProducto.Add(obj);
+                
+            }
+
+            cv.Encabezado = dataEncabezado;
+        }
+
+        private void LeerXmlDescomprimidos(String pathLocalizacion)
+        {
             RecorrerArchivosDirectorioDestino(pathLocalizacion);
 
         }
@@ -84,6 +119,12 @@ namespace LectorDiarios
         private void RecorrerArchivosDirectorioDestino(string pathDestino)
         {
             string [] files = Directory.GetFiles(pathDestino);
+            if(files==null || files.Count() <= 0)
+            {
+                MessageBox.Show("No se encontraron archivos en la ruta seleccionada.", "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             foreach (string file in files)
             {
                 LlenarControlVolumetrico(file);
@@ -118,10 +159,14 @@ namespace LectorDiarios
                             }
                         }
                     }
+                    LstProductosMEnsual.Add(prod);
+
                 }
+
                 LstControlVolumetrico = LstControlVolumetrico.OrderBy(x => x.NombreClienteOProveedor).ThenBy(x => x.CFDI).ThenBy(x => x.ValorNumerico).ThenBy(x => x.FechaYHoraTransaccion).ToList();
                 dgvRegistros.DataSource = LstControlVolumetrico;
                 tsTotalRegistros.Text = dgvRegistros.RowCount.ToString("N0");
+                
             }
             else
             {
@@ -146,7 +191,7 @@ namespace LectorDiarios
             XmlNode nodeRfcContribuyente = doc.SelectSingleNode("//Covol:RfcContribuyente", nsm);
             XmlNode nodeRfcRepresentanteLegal = doc.SelectSingleNode("//Covol:RfcRepresentanteLegal", nsm);
             XmlNode nodeRfcProveedor = doc.SelectSingleNode("//Covol:RfcProveedor", nsm);
-            //XmlNode nodeCaracter = doc.SelectSingleNode("//Covol:Caracter", nsm);
+            XmlNode nodeCaracter = doc.SelectSingleNode("//Covol:Caracter", nsm);
             XmlNode nodeClaveInstalacion = doc.SelectSingleNode("//Covol:ClaveInstalacion", nsm);
             XmlNode nodeDescripcionInstalacion = doc.SelectSingleNode("//Covol:DescripcionInstalacion", nsm);
             XmlNode nodeNumeroPozos = doc.SelectSingleNode("//Covol:NumeroPozos", nsm);
@@ -172,6 +217,13 @@ namespace LectorDiarios
                 NumeroDispensarios = int.Parse(nodeNumeroDispensarios.InnerText),
                 FechaYHoraCorte = DateTime.Parse(nodeFechaYHoraCorte.InnerText)
 
+            };
+
+            cv.Caracter = new CARACTER
+            {
+                TipoCaracter = nodeCaracter.ChildNodes[0].InnerText,
+                ModalidadPermiso = nodeCaracter.ChildNodes[1].InnerText,
+                NumPermiso = nodeCaracter.ChildNodes[2].InnerText
             };
 
             //creando listado de productos
@@ -572,8 +624,8 @@ namespace LectorDiarios
             if (LstControlVolumetrico == null|| LstControlVolumetrico.Count<=0)
             {
                 MessageBox.Show(
-                    "Advertencia", 
-                    "No se ha cargado la información.", 
+                    "No se ha cargado la información.",
+                    "Advertencia",                      
                     MessageBoxButtons.OK, 
                     MessageBoxIcon.Warning);
                 return;
@@ -621,5 +673,11 @@ namespace LectorDiarios
         {
             Exportar();
         }
+
+
+
+
+
+
     }
 }
