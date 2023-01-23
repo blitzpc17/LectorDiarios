@@ -13,7 +13,7 @@ namespace CapaDatos.Diario
         public string ClaveSubProducto { get; set; }
         public GASOLINA Gasolina { get; set; }
         public string MarcaComercial { get; set; }
-        public TANQUE Tanque { get; set; }
+        public List<TANQUE> Tanques { get; set; }
         public List<DISPENSARIO> Dispensarios { get; set; }
 
     }

@@ -42,18 +42,19 @@ namespace LectorDiarios
 
             //calcular sumatoria de litros
 
-            obj.Encabezado.DataProducto = obj.Encabezado.DataProducto.GroupBy(x => x.ClaveProducto).Select(x => new Entidades.Diario.ENCABEZADOPRODUCTO
+            obj.Encabezado.DataProducto = obj.Encabezado.DataProducto.GroupBy(x => x.ClaveSubProducto).Select(x => new Entidades.Diario.ENCABEZADOPRODUCTO
             {
                 ClaveProducto = x.First().ClaveProducto,    
                 ClaveSubProducto = x.First().ClaveSubProducto,
                 MarcaComercial = x.First().MarcaComercial,
                 InventarioFinalMes = x.Sum(z=>z.InventarioFinalMes),
                 VecesRecepcionProducto = x.Sum(z=>z.VecesRecepcionProducto),
-                LitrosAcumuladosMes = x.Sum(z=>z.LitrosAcumuladosMes)
+                LitrosAcumuladosMes = x.Sum(z=>z.LitrosAcumuladosMes),
+                ArchivosDiario = x.First().ArchivosDiario
             }).ToList();
 
             int posicionDgvInventariosY = 0;
-            foreach (var pro in obj.PRODUCTO.OrderByDescending(x => x.ClaveProducto).ToList())
+            foreach (var pro in obj.PRODUCTO.ToList())
             {
 
                 DataGridView dgvEncabezadoInventario = new DataGridView();
@@ -65,9 +66,9 @@ namespace LectorDiarios
                 dgvEncabezadoInventario.Columns.Add("Valor", "");
                 dgvEncabezadoInventario.Name = "dgvEncabezado" + pro.ClaveProducto;
                 dgvEncabezadoInventario.Rows.Add("Producto:", pro.ClaveSubProducto + " " + pro.MarcaComercial);
-                dgvEncabezadoInventario.Rows.Add("INVENTARIO EN TANQUE AL FINALIZAR EL MES:", pro.Tanque.Existencias.VolumenAcumOpsEntrega.ValorNumerico);//pro.REPORTEDEVOLUMENMENSUAL.CONTROLDEEXISTENCIAS.VolumenExistenciasMes.ValorNumerico);
-                dgvEncabezadoInventario.Rows.Add("NÚMERO DE VECES QUE ENTRO PRODUCTO AL TANQUE:", pro.Tanque.Recepciones.SumaVolumenRecepcion.ValorNumerico); //pro.REPORTEDEVOLUMENMENSUAL.RECEPCIONES.TotalRecepcionesMes);
-                dgvEncabezadoInventario.Rows.Add("TOTAL DE LITROS QUE MUESTRA LA FACTURA:", obj.Encabezado.DataProducto.Where(x => x.ClaveProducto == pro.ClaveProducto).First().LitrosAcumuladosMes);   //pro.REPORTEDEVOLUMENMENSUAL.RECEPCIONES.SumaVolumenRecepcionMes.ValorNumerico);
+               // dgvEncabezadoInventario.Rows.Add("INVENTARIO EN TANQUE AL FINALIZAR EL MES:", pro.Tanque.Existencias.VolumenAcumOpsEntrega.ValorNumerico);//pro.REPORTEDEVOLUMENMENSUAL.CONTROLDEEXISTENCIAS.VolumenExistenciasMes.ValorNumerico);
+               // dgvEncabezadoInventario.Rows.Add("NÚMERO DE VECES QUE ENTRO PRODUCTO AL TANQUE:", pro.Tanque.Recepciones.SumaVolumenRecepcion.ValorNumerico); //pro.REPORTEDEVOLUMENMENSUAL.RECEPCIONES.TotalRecepcionesMes);
+                dgvEncabezadoInventario.Rows.Add("TOTAL DE LITROS QUE MUESTRA LA FACTURA:", obj.Encabezado.DataProducto.Where(x => x.ClaveSubProducto == pro.ClaveSubProducto).First().LitrosAcumuladosMes.ToString("N2"));   //pro.REPORTEDEVOLUMENMENSUAL.RECEPCIONES.SumaVolumenRecepcionMes.ValorNumerico);
                 panelInventarios.Controls.Add(dgvEncabezadoInventario);
                 dgvEncabezadoInventario.Location = new System.Drawing.Point(10, posicionDgvInventariosY + 30);
                 dgvEncabezadoInventario.Width = 1107;
@@ -76,13 +77,8 @@ namespace LectorDiarios
                 dgvEncabezadoInventario.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
                 DataGridView dgvPartidas = new DataGridView();
                 dgvPartidas.Columns.Add("numero", "No.");
-                dgvPartidas.Columns.Add("nombreCliente", "Nombre Cliente Proveedor");
-                dgvPartidas.Columns.Add("rfcCliente", "Rfc Cliente Proveedor");
-                dgvPartidas.Columns.Add("cfdi", "CFDI");
-                dgvPartidas.Columns.Add("fechaHora", "Fecha y Hora");
-                dgvPartidas.Columns.Add("precioCompra", "Precio Compra");
-                dgvPartidas.Columns.Add("precioVenta", "Precio Venta Púb.");
-                dgvPartidas.Columns.Add("valorNumerico", "ValorNumerico");
+                dgvPartidas.Columns.Add("fechahora", "Fecha y Hora");
+                dgvPartidas.Columns.Add("cantidad", "Cantidad");
 
                 panelInventarios.Controls.Add(dgvPartidas);
                 dgvPartidas.Location = new System.Drawing.Point(10, posicionDgvInventariosY + 30);
@@ -93,6 +89,15 @@ namespace LectorDiarios
                 //foreach partidas
                 int numeral = 1;
                 decimal sumaRecepciones = 0;
+                foreach (var part in obj.Encabezado.DataProducto.Where(x => x.ClaveSubProducto == pro.ClaveSubProducto).First().ArchivosDiario.OrderBy(x=>x.Fecha))
+                {
+                    dgvPartidas.Rows.Add(part.Fecha, part.Cantidad.ToString("N2"));
+                }
+                numeral++;
+
+
+
+
                 /*
                 if (pro.REPORTEDEVOLUMENMENSUAL.RECEPCIONES.Complemento == null)
                 {

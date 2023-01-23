@@ -71,7 +71,7 @@ namespace LectorDiarios
 
         private void GenerarInventarioMensual()
         {
-            var productos = LstProductosMEnsual.GroupBy(x => x.ClaveProducto).Select(x=>x.ToList()).ToList();
+            var productos = LstProductosMEnsual.GroupBy(x => x.ClaveSubProducto).Select(x=>x.ToList()).ToList();
             dataEncabezado = new DATAENCABEZADOINVENTARIODIARIO();
             
 
@@ -95,16 +95,28 @@ namespace LectorDiarios
                 obj.ClaveProducto = pro.First().ClaveProducto;
                 obj.ClaveSubProducto = pro.First().ClaveSubProducto;
                 obj.MarcaComercial = pro.First().MarcaComercial;
+                obj.ArchivosDiario = new List<DIARIOFILE>();
 
                 foreach (var item in pro)
                 {
-                    obj.InventarioFinalMes += item.Tanque.Existencias.VolumenAcumOpsRecepcion.ValorNumerico;
-                    obj.VecesRecepcionProducto += item.Tanque.Recepciones.SumaVolumenRecepcion.ValorNumerico;
-                    obj.LitrosAcumuladosMes += item.Tanque.Recepciones.SumaVolumenRecepcion.ValorNumerico;
+                    foreach(var tanque in item.Tanques)
+                    {
+                        obj.LitrosAcumuladosMes += tanque.Existencias.VolumenAcumOpsRecepcion.ValorNumerico;
+                        DIARIOFILE diario = new DIARIOFILE
+                        {
+                            Fecha = tanque.Existencias.FechaYHoraEstaMedicion.GetValueOrDefault(DateTime.Now),
+                            Cantidad = tanque.Existencias.VolumenAcumOpsRecepcion.ValorNumerico
+                        };
+                        obj.ArchivosDiario.Add(diario);
+                    }
+                    //obj.InventarioFinalMes += item.Tanque.Existencias.VolumenAcumOpsRecepcion.ValorNumerico;  //dejar este comentado
+                    //obj.VecesRecepcionProducto += item.Tanques.Sum(x => x.Existencias.VolumenAcumOpsEntrega.ValorNumerico);//.Existencias.VolumenAcumOpsEntrega.ValorNumerico;//item.Tanque.Recepciones.TotalRecepciones;
+                    //  obj.LitrosAcumuladosMes += item.Tanque.Recepciones.SumaVolumenRecepcion.ValorNumerico;
+                   
                 }
 
                 dataEncabezado.DataProducto.Add(obj);
-                
+
             }
 
             cv.Encabezado = dataEncabezado;
@@ -244,130 +256,185 @@ namespace LectorDiarios
                     GasolinaConCombustibleNoFosil = nodeGasolina.ChildNodes[1] != null ? nodeGasolina.ChildNodes[1].InnerText : ""
 
                 };
+
+        //tenques
+
                 var nodeTanque = pro.ChildNodes[4];
-                prod.Tanque = new TANQUE
-                {
-                    ClaveIdentificacionTanque = nodeTanque.ChildNodes[0].InnerText,
-                    LocalizacionYODescripcionTanque = nodeTanque.ChildNodes[1].InnerText,
-                    VigenciaCalibracionTanque = Convert.ToDateTime(nodeTanque.ChildNodes[2].InnerText),
-                    EstadoTanque = nodeTanque.ChildNodes[7].InnerText
-                };
-                var nodeCapacidadTotalTanque = nodeTanque.ChildNodes[3];
-                prod.Tanque.CapacidadTotalTanque = new CAPACIDADTOTALTANQUE
-                {
-                    ValorNumerico = decimal.Parse(nodeCapacidadTotalTanque.ChildNodes[0].InnerText),
-                    UM = nodeCapacidadTotalTanque.ChildNodes[1].InnerText
-                };
+                prod.Tanques = new List<TANQUE>();
 
-                var nodeCapacidadOperativaTanque = nodeTanque.ChildNodes[4];
-                prod.Tanque.CapacidadOperativaTanque = new CAPACIDADOPERATIVATANQUE()
-                {
-                    ValorNumerico = decimal.Parse(nodeCapacidadOperativaTanque.ChildNodes[0].InnerText),
-                    UM = nodeCapacidadTotalTanque.ChildNodes[1].InnerText
-                };
+                prod.Tanques.Add(ObtenerTanque(nodeTanque));
 
-                var nodeCapacidadUtilTanque = nodeTanque.ChildNodes[5];
-                prod.Tanque.CapacidadUtilTanque = new CAPACIDADUTILTANQUE
+                if (pro.ChildNodes[5].Name.Equals(nodeTanque.Name))
                 {
-                    ValorNumerico = decimal.Parse(nodeCapacidadUtilTanque.ChildNodes[0].InnerText),
-                    UM = nodeCapacidadUtilTanque.ChildNodes[1].InnerText
-                };
+                    prod.Tanques.Add(ObtenerTanque(pro.ChildNodes[5]));
 
-                var nodeVolumenMinimoOperacion = nodeTanque.ChildNodes[6];
-                prod.Tanque.VolumenMinimoOperacion = new VOLUMENMINIMOOPERACION
-                {
-                    ValorNumerico = decimal.Parse(nodeVolumenMinimoOperacion.ChildNodes[0].InnerText),
-                    UM = nodeVolumenMinimoOperacion.ChildNodes[1].InnerText
-                };
+                    prod.Dispensarios = new List<DISPENSARIO>();
 
-                var nodeMedicionTanque = nodeTanque.ChildNodes[8];
-                prod.Tanque.MedicionTanque = new MEDICIONTANQUE
-                {
-                    SistemaMedicionTanque = nodeMedicionTanque.ChildNodes[0].InnerText,
-                    LocalizODescripSistMedicionTanque = nodeMedicionTanque.ChildNodes[1]==null?"": nodeMedicionTanque.ChildNodes[1].InnerText,
-                    VigenciaCalibracionSistMedicionTanque = nodeMedicionTanque.ChildNodes[2]!=null?DateTime.Parse(nodeMedicionTanque.ChildNodes[2].InnerText):null,
-                    IncertidumbreMedicionSistMedicionTanque = nodeMedicionTanque.ChildNodes[3]!=null?decimal.Parse(nodeMedicionTanque.ChildNodes[3].InnerText):null
-                };
-                var nodeExistencias = nodeTanque.ChildNodes[9];
-                prod.Tanque.Existencias = new EXISTENCIAS
-                {
-                    HoraRecepcionAcumulado = nodeExistencias.ChildNodes[2]!=null?nodeExistencias.ChildNodes[2].InnerText:"",
-                    HoraEntregaAcumulado = nodeExistencias.ChildNodes[4]!=null? nodeExistencias.ChildNodes[4].InnerText:"",
-                    FechaYHoraEstaMedicion = nodeExistencias.ChildNodes[6]!=null?DateTime.Parse(nodeExistencias.ChildNodes[6].InnerText):null,
-                    FechaYHoraMedicionAnterior = nodeExistencias.ChildNodes[7]!=null?DateTime.Parse(nodeExistencias.ChildNodes[7].InnerText):null
-                };
-
-                var nodeVolumenExistenciasAnterior = nodeExistencias.ChildNodes[0];
-                prod.Tanque.Existencias.VolumenExistenciasAnterior = new VOLUMENEXISTENCIASANTERIOR
-                {
-                    ValorNumerico = decimal.Parse(nodeVolumenExistenciasAnterior.ChildNodes[0].InnerText),
-                };
-
-                var nodeVolumenAcumOpsRecepcion = nodeExistencias.ChildNodes[1];
-                prod.Tanque.Existencias.VolumenAcumOpsRecepcion = new VOLUMENACUMOPSRECEPCION
-                {
-                    ValorNumerico = decimal.Parse(nodeVolumenAcumOpsRecepcion.ChildNodes[0].InnerText),
-                    UM = nodeVolumenAcumOpsRecepcion.ChildNodes[1].InnerText
-                };
-
-                var nodeVolumenAcumOpsEntrega = nodeExistencias.ChildNodes[3];
-                prod.Tanque.Existencias.VolumenAcumOpsEntrega = new VOLUMENACUMOPSENTREGA
-                {
-                    ValorNumerico = decimal.Parse(nodeVolumenAcumOpsEntrega.ChildNodes[0].InnerText),
-                    UM = nodeVolumenAcumOpsEntrega.ChildNodes[1].InnerText
-                };
-
-                var nodeVolumenExistencias = nodeExistencias.ChildNodes[5];
-                prod.Tanque.Existencias.VolumenExistencias = new VOLUMENEXISTENCIAS
-                {
-                    ValorNumerico = decimal.Parse(nodeVolumenExistencias.ChildNodes[0].InnerText),
-                };
-
-                var nodeRecepciones = nodeTanque.ChildNodes[10];
-                prod.Tanque.Recepciones = new RECEPCIONES
-                {
-                    TotalRecepciones = int.Parse(nodeRecepciones.ChildNodes[0].InnerText),
-                    TotalDocumentos = int.Parse(nodeRecepciones.ChildNodes[2].InnerText)
-                };
-
-                var nodeSumaVolumenRecepcion = nodeRecepciones.ChildNodes[1];
-                prod.Tanque.Recepciones.SumaVolumenRecepcion = new SUMAVOLUMENRECEPCION
-                {
-                    ValorNumerico = decimal.Parse(nodeSumaVolumenRecepcion.ChildNodes[0].InnerText),
-                    UM = nodeSumaVolumenRecepcion.ChildNodes[1].InnerText
-                };
-
-                var nodeEntregas = nodeTanque.ChildNodes[11];
-                prod.Tanque.Entregas = new ENTREGAS
-                {
-                    TotalEntregas = int.Parse(nodeEntregas.ChildNodes[0].InnerText),
-                    TotalDocumentos = int.Parse(nodeEntregas.ChildNodes[2].InnerText),
-                };
-
-                var nodeSumaVolumenEntregado = nodeEntregas.ChildNodes[1];
-                prod.Tanque.Entregas.SUMAVOLUMENENTREGADO = new SUMAVOLUMENENTREGADO
-                {
-                    ValorNumerico = decimal.Parse(nodeSumaVolumenEntregado.ChildNodes[0].InnerText),
-                    UM = nodeSumaVolumenEntregado.ChildNodes[1].InnerText
-                };
-
-                //obtener dispensario
-                prod.Dispensarios = new List<DISPENSARIO>();
-                //agregar dispensario a la lista de dispensarios
-                if (pro.ChildNodes[5] != null)
-                {
-                    prod.Dispensarios.Add(ObtenerDispensario(pro.ChildNodes[5]));
+                    if (pro.ChildNodes[6] != null)
+                    {
+                        prod.Dispensarios.Add(ObtenerDispensario(pro.ChildNodes[6]));
+                    }
+                    if (pro.ChildNodes[7] != null)
+                    {
+                        prod.Dispensarios.Add(ObtenerDispensario(pro.ChildNodes[7]));
+                    }
+                    if (pro.ChildNodes.Count == 9 && pro.ChildNodes[8] != null)
+                    {
+                        prod.Dispensarios.Add(ObtenerDispensario(pro.ChildNodes[8]));
+                    }
                 }
-                if (pro.ChildNodes[6] != null)
+                else
                 {
-                    prod.Dispensarios.Add(ObtenerDispensario(pro.ChildNodes[6]));
+                    //obtener dispensario
+                    prod.Dispensarios = new List<DISPENSARIO>();
+                    //agregar dispensario a la lista de dispensarios
+                    if (pro.ChildNodes[5] != null)
+                    {
+                        prod.Dispensarios.Add(ObtenerDispensario(pro.ChildNodes[5]));
+                    }
+                    if (pro.ChildNodes[6] != null)
+                    {
+                        prod.Dispensarios.Add(ObtenerDispensario(pro.ChildNodes[6]));
+                    }
+                    
                 }
+
+
+
+
+        //end tanques
+
+                
                 //agregando producto a control volumetrico
                 cv.PRODUCTO.Add(prod);
             }
 
 
         }
+
+
+        private TANQUE ObtenerTanque(XmlNode nodeTanque)
+        {
+
+            TANQUE Tanque = new TANQUE
+            {
+                ClaveIdentificacionTanque = nodeTanque.ChildNodes[0].InnerText,
+                LocalizacionYODescripcionTanque = nodeTanque.ChildNodes[1].InnerText,
+                VigenciaCalibracionTanque = Convert.ToDateTime(nodeTanque.ChildNodes[2].InnerText),
+                EstadoTanque = nodeTanque.ChildNodes[7].InnerText
+            };
+            var nodeCapacidadTotalTanque = nodeTanque.ChildNodes[3];
+            Tanque.CapacidadTotalTanque = new CAPACIDADTOTALTANQUE
+            {
+                ValorNumerico = decimal.Parse(nodeCapacidadTotalTanque.ChildNodes[0].InnerText),
+                UM = nodeCapacidadTotalTanque.ChildNodes[1].InnerText
+            };
+
+            var nodeCapacidadOperativaTanque = nodeTanque.ChildNodes[4];
+            Tanque.CapacidadOperativaTanque = new CAPACIDADOPERATIVATANQUE()
+            {
+                ValorNumerico = decimal.Parse(nodeCapacidadOperativaTanque.ChildNodes[0].InnerText),
+                UM = nodeCapacidadTotalTanque.ChildNodes[1].InnerText
+            };
+
+            var nodeCapacidadUtilTanque = nodeTanque.ChildNodes[5];
+            Tanque.CapacidadUtilTanque = new CAPACIDADUTILTANQUE
+            {
+                ValorNumerico = decimal.Parse(nodeCapacidadUtilTanque.ChildNodes[0].InnerText),
+                UM = nodeCapacidadUtilTanque.ChildNodes[1].InnerText
+            };
+
+            var nodeVolumenMinimoOperacion = nodeTanque.ChildNodes[6];
+            Tanque.VolumenMinimoOperacion = new VOLUMENMINIMOOPERACION
+            {
+                ValorNumerico = decimal.Parse(nodeVolumenMinimoOperacion.ChildNodes[0].InnerText),
+                UM = nodeVolumenMinimoOperacion.ChildNodes[1].InnerText
+            };
+
+            var nodeMedicionTanque = nodeTanque.ChildNodes[8];
+            Tanque.MedicionTanque = new MEDICIONTANQUE
+            {
+                SistemaMedicionTanque = nodeMedicionTanque.ChildNodes[0].InnerText,
+                LocalizODescripSistMedicionTanque = nodeMedicionTanque.ChildNodes[1] == null ? "" : nodeMedicionTanque.ChildNodes[1].InnerText,
+                VigenciaCalibracionSistMedicionTanque = nodeMedicionTanque.ChildNodes[2] != null ? DateTime.Parse(nodeMedicionTanque.ChildNodes[2].InnerText) : null,
+                IncertidumbreMedicionSistMedicionTanque = nodeMedicionTanque.ChildNodes[3] != null ? decimal.Parse(nodeMedicionTanque.ChildNodes[3].InnerText) : null
+            };
+
+            //EXISTENCIAS
+            var nodeExistencias = nodeTanque.ChildNodes[9];
+            Tanque.Existencias = new EXISTENCIAS
+            {
+                HoraRecepcionAcumulado = nodeExistencias.ChildNodes[2] != null ? nodeExistencias.ChildNodes[2].InnerText : "",
+                HoraEntregaAcumulado = nodeExistencias.ChildNodes[4] != null ? nodeExistencias.ChildNodes[4].InnerText : "",
+                FechaYHoraEstaMedicion = nodeExistencias.ChildNodes[6] != null ? DateTime.Parse(nodeExistencias.ChildNodes[6].InnerText) : null,
+                FechaYHoraMedicionAnterior = nodeExistencias.ChildNodes[7] != null ? DateTime.Parse(nodeExistencias.ChildNodes[7].InnerText) : null
+            };
+
+            var nodeVolumenExistenciasAnterior = nodeExistencias.ChildNodes[0];
+            Tanque.Existencias.VolumenExistenciasAnterior = new VOLUMENEXISTENCIASANTERIOR
+            {
+                ValorNumerico = decimal.Parse(nodeVolumenExistenciasAnterior.ChildNodes[0].InnerText),
+            };
+
+            var nodeVolumenAcumOpsRecepcion = nodeExistencias.ChildNodes[1];
+            Tanque.Existencias.VolumenAcumOpsRecepcion = new VOLUMENACUMOPSRECEPCION
+            {
+                ValorNumerico = decimal.Parse(nodeVolumenAcumOpsRecepcion.ChildNodes[0].InnerText),
+                UM = nodeVolumenAcumOpsRecepcion.ChildNodes[1].InnerText
+            };
+
+            var nodeVolumenAcumOpsEntrega = nodeExistencias.ChildNodes[3];
+            Tanque.Existencias.VolumenAcumOpsEntrega = new VOLUMENACUMOPSENTREGA
+            {
+                ValorNumerico = decimal.Parse(nodeVolumenAcumOpsEntrega.ChildNodes[0].InnerText),
+                UM = nodeVolumenAcumOpsEntrega.ChildNodes[1].InnerText
+            };
+
+            var nodeVolumenExistencias = nodeExistencias.ChildNodes[5];
+            Tanque.Existencias.VolumenExistencias = new VOLUMENEXISTENCIAS
+            {
+                ValorNumerico = decimal.Parse(nodeVolumenExistencias.ChildNodes[0].InnerText),
+            };
+            //end existencias
+
+            //recepciones
+
+            var nodeRecepciones = nodeTanque.ChildNodes[10];
+            Tanque.Recepciones = new RECEPCIONES
+            {
+                TotalRecepciones = int.Parse(nodeRecepciones.ChildNodes[0].InnerText),
+                TotalDocumentos = int.Parse(nodeRecepciones.ChildNodes[2].InnerText)
+            };
+
+            var nodeSumaVolumenRecepcion = nodeRecepciones.ChildNodes[1];
+            Tanque.Recepciones.SumaVolumenRecepcion = new SUMAVOLUMENRECEPCION
+            {
+                ValorNumerico = decimal.Parse(nodeSumaVolumenRecepcion.ChildNodes[0].InnerText),
+                UM = nodeSumaVolumenRecepcion.ChildNodes[1].InnerText
+            };
+
+            //end recepciones
+
+            //entregas
+
+            var nodeEntregas = nodeTanque.ChildNodes[11];
+            Tanque.Entregas = new ENTREGAS
+            {
+                TotalEntregas = int.Parse(nodeEntregas.ChildNodes[0].InnerText),
+                TotalDocumentos = int.Parse(nodeEntregas.ChildNodes[2].InnerText),
+            };
+
+            var nodeSumaVolumenEntregado = nodeEntregas.ChildNodes[1];
+            Tanque.Entregas.SUMAVOLUMENENTREGADO = new SUMAVOLUMENENTREGADO
+            {
+                ValorNumerico = decimal.Parse(nodeSumaVolumenEntregado.ChildNodes[0].InnerText),
+                UM = nodeSumaVolumenEntregado.ChildNodes[1].InnerText
+            };
+            //end entregas
+            return Tanque;
+        }
+
+
         private DISPENSARIO ObtenerDispensario(XmlNode nodeDispensario)
         {
             if (nodeDispensario.ChildNodes[0] != null)

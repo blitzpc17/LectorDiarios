@@ -14,6 +14,7 @@ namespace Entidades.Diario
         public decimal InventarioFinalMes { get; set; }
         public decimal VecesRecepcionProducto { get; set; }
         public decimal LitrosAcumuladosMes { get; set; }
+        public List<DIARIOFILE> ArchivosDiario { get; set; }
 
     }
 }
