@@ -87,41 +87,14 @@ namespace LectorDiarios
                 dgvPartidas.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
 
                 //foreach partidas
-                int numeral = 1;
+                int numeral = 0;
                 decimal sumaRecepciones = 0;
                 foreach (var part in obj.Encabezado.DataProducto.Where(x => x.ClaveSubProducto == pro.ClaveSubProducto).First().ArchivosDiario.OrderBy(x=>x.Fecha))
                 {
-                    dgvPartidas.Rows.Add(part.Fecha, part.Cantidad.ToString("N2"));
+                    numeral++;
+                    dgvPartidas.Rows.Add(numeral, part.Fecha, part.Cantidad.ToString("N2"));
                 }
-                numeral++;
-
-
-
-
-                /*
-                if (pro.REPORTEDEVOLUMENMENSUAL.RECEPCIONES.Complemento == null)
-                {
-                    sumaRecepciones = 0;
-                    MessageBox.Show("El producto " + pro.ClaveSubProducto + " " + pro.MarcaComercial + " no tiene COMPLEMENTOS EN RECEPCIONES.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-                else
-                {
-                    foreach (var part in pro.REPORTEDEVOLUMENMENSUAL.RECEPCIONES.Complemento.Complemento_Expendio.NACIONAL)
-                    {
-                        dgvPartidas.Rows.Add(numeral, part.NombreClienteOProveedor, part.RfcClienteOProveedor, part.CFDIs.CFDI, part.CFDIs.FechaYHoraTransaccion, part.CFDIs.PrecioCompra, part.CFDIs.PrecioDeVentaAlPublico, part.CFDIs.VolumenDocumentado.ValorNumerico);
-                        sumaRecepciones += part.CFDIs.VolumenDocumentado.ValorNumerico;
-                        numeral++;
-                    }
-                }
-
-
-                decimal diferenciaEntregadoRecepcion = pro.REPORTEDEVOLUMENMENSUAL.RECEPCIONES.SumaVolumenRecepcionMes.ValorNumerico - sumaRecepciones;
-                dgvPartidas.Rows.Add(null, null, null, null, null, null, "TOTAL:", sumaRecepciones);
-                dgvPartidas.Rows.Add(null, null, null, "VENTA LTS. POR MES:", pro.REPORTEDEVOLUMENMENSUAL.ENTREGAS.SumaVolumenEntregado.ValorNumerico, null, null, null);
-                dgvPartidas.Rows.Add(null, null, null, "DIF- FACT. VS PIPAS:", diferenciaEntregadoRecepcion, null, null, null);
-                dgvPartidas.Rows.Add(null, null, null, "LA FACTURA TRAE", diferenciaEntregadoRecepcion >= 0 ? " MÁS" : " MENOS");
-
-                */
+                
                 posicionDgvInventariosY = dgvPartidas.Location.Y + dgvPartidas.Size.Height + 15;
 
             }
