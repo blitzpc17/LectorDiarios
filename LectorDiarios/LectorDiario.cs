@@ -102,16 +102,15 @@ namespace LectorDiarios
                     foreach(var tanque in item.Tanques)
                     {
                         obj.LitrosAcumuladosMes += tanque.Existencias.VolumenAcumOpsRecepcion.ValorNumerico;
+                        obj.LitrosExtraidos += tanque.Existencias.VolumenAcumOpsEntrega.ValorNumerico;
                         DIARIOFILE diario = new DIARIOFILE
                         {
                             Fecha = tanque.Existencias.FechaYHoraEstaMedicion.GetValueOrDefault(DateTime.Now),
-                            Cantidad = tanque.Existencias.VolumenAcumOpsRecepcion.ValorNumerico
+                            Cantidad = tanque.Existencias.VolumenAcumOpsRecepcion.ValorNumerico,
+                            CantidadExtraida = tanque.Existencias.VolumenAcumOpsEntrega.ValorNumerico
                         };
                         obj.ArchivosDiario.Add(diario);
                     }
-                    //obj.InventarioFinalMes += item.Tanque.Existencias.VolumenAcumOpsRecepcion.ValorNumerico;  //dejar este comentado
-                    //obj.VecesRecepcionProducto += item.Tanques.Sum(x => x.Existencias.VolumenAcumOpsEntrega.ValorNumerico);//.Existencias.VolumenAcumOpsEntrega.ValorNumerico;//item.Tanque.Recepciones.TotalRecepciones;
-                    //  obj.LitrosAcumuladosMes += item.Tanque.Recepciones.SumaVolumenRecepcion.ValorNumerico;
                    
                 }
 

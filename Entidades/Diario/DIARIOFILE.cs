@@ -9,6 +9,7 @@ namespace Entidades.Diario
     public class DIARIOFILE
     {
         public DateTime Fecha { get; set; }
-        public Decimal Cantidad { get; set; }
+        public decimal Cantidad { get; set; }
+        public decimal CantidadExtraida { get; set; }
     }
 }
